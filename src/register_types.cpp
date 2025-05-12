@@ -4,7 +4,7 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
-#include "../include/kaboom_ui/kaboom_control.h"
+#include "../include/kaboom_ui/kaboom_control.hpp"
 
 using namespace godot;
 
