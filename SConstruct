@@ -2,7 +2,44 @@
 import os
 import sys
 
-from methods import print_error
+
+def RGlob(
+    paths: list[str] = [],
+    patterns: list[str] = [".cpp", ".c"],
+    ondisk: bool = True,
+    source: bool = False,
+    strings: bool = False,
+    exclude: list[str] = [],
+):
+    result_nodes = []
+    while paths:
+        path = paths.pop()
+        all_nodes = Glob(
+            f"{path}/*",
+            ondisk=ondisk,
+            source=source,
+            strings=strings,
+            exclude=exclude,
+        )
+        paths.extend(
+            entry
+            for entry in all_nodes
+            if entry.isdir() or (entry.srcnode() and entry.srcnode().isdir())
+        )  # `srcnode()` must be used because `isdir()` doesn't work for entries in variant dirs which haven't been copied yet.
+        # print(list(map(lambda node: str(node), paths)))
+
+        for pattern in patterns:
+            result_nodes.extend(
+                Glob(
+                    f"{path}/*{pattern}",
+                    ondisk=ondisk,
+                    source=source,
+                    strings=strings,
+                    exclude=exclude,
+                )
+            )
+
+    return result_nodes
 
 
 libname = "KABOOM"
@@ -40,7 +77,11 @@ Run the following command to download godot-cpp:
 env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
 env.Append(CPPPATH=["src/"])
-sources = Glob("src/*.cpp")
+
+sources = RGlob(["src"], exclude=["src\\gen"])
+print("\nAll Sources:")
+print(list(map(lambda node: str(node), sources)))
+print("\n")
 
 if env["target"] in ["editor", "template_debug"]:
     try:

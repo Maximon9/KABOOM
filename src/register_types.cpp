@@ -4,7 +4,7 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
-#include "../include/kaboom_ui/kaboom_control.hpp"
+#include "../../includes/kaboom_ui/kaboom_control.hpp"
 
 using namespace godot;
 
@@ -13,7 +13,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level) {
 		return;
 	}
 	//GDREGISTER_CLASS(YourClass);
-	GDREGISTER_CLASS(KABOOMControl)
+	// GDREGISTER_CLASS(KABOOMControl)
+	GDREGISTER_ABSTRACT_CLASS(KABOOMControl);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {

@@ -28,19 +28,16 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#include "../../includes/kaboom_ui/kaboom_control.hpp"
+#include "../../includes/kaboom_canvas_item.hpp"
 
 // using namespace godot;
 
-KABOOMControl::KABOOMControl() {
+KABOOMCanvasItem::KABOOMCanvasItem() {
+	UtilityFunctions::print("KABOOMCanvasItem got made");
 }
-KABOOMControl::~KABOOMControl() {
-}
-
-void KABOOMControl::test() {
-	UtilityFunctions::print("KABOOM This worked, LETSSSSSSSSSS GO!!!");
+KABOOMCanvasItem::~KABOOMCanvasItem() {
+	UtilityFunctions::print("KABOOMCanvasItem got destroyed");
 }
 
-void KABOOMControl::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("test"), &KABOOMControl::test);
+void KABOOMCanvasItem::_bind_methods() {
 }
