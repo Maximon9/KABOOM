@@ -54,3 +54,7 @@ web.wasm32.single.debug = "./web/libKABOOM.web.template_debug.wasm32.nothreads.w
 web.wasm32.double.debug = "./web/libKABOOM.web.template_release.wasm32.double.nothreads.wasm"
 web.wasm32.single.release = "./web/libKABOOM.web.template_release.wasm32.nothreads.wasm"
 web.wasm32.double.release = "./web/libKABOOM.web.template_release.wasm32.double.nothreads.wasm"
+
+[icons]
+KABOOMCanvasItem = "res://bin/icons/KABOOMCanvasItem.svg"
+KABOOMControl = "res://bin/icons/KABOOMControl.svg"

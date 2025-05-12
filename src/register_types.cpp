@@ -14,7 +14,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level) {
 	}
 	//GDREGISTER_CLASS(YourClass);
 	// GDREGISTER_CLASS(KABOOMControl)
-	GDREGISTER_ABSTRACT_CLASS(KABOOMControl);
+	GDREGISTER_ABSTRACT_CLASS(KABOOMCanvasItem);
+	GDREGISTER_CLASS(KABOOMControl);
 }
 
 void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
