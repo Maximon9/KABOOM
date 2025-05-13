@@ -214,11 +214,11 @@ void KABOOMCanvasItem::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_canvas_item"), &KABOOMCanvasItem::get_canvas_item);
 
-	// ClassDB::bind_method(D_METHOD("set_visible", "visible"), &KABOOMCanvasItem::set_visible);
-	// ClassDB::bind_method(D_METHOD("is_visible"), &KABOOMCanvasItem::is_visible);
-	// ClassDB::bind_method(D_METHOD("is_visible_in_tree"), &KABOOMCanvasItem::is_visible_in_tree);
-	// ClassDB::bind_method(D_METHOD("show"), &KABOOMCanvasItem::show);
-	// ClassDB::bind_method(D_METHOD("hide"), &KABOOMCanvasItem::hide);
+	ClassDB::bind_method(D_METHOD("set_visible", "visible"), &KABOOMCanvasItem::set_visible);
+	ClassDB::bind_method(D_METHOD("is_visible"), &KABOOMCanvasItem::is_visible);
+	ClassDB::bind_method(D_METHOD("is_visible_in_tree"), &KABOOMCanvasItem::is_visible_in_tree);
+	ClassDB::bind_method(D_METHOD("show"), &KABOOMCanvasItem::show);
+	ClassDB::bind_method(D_METHOD("hide"), &KABOOMCanvasItem::hide);
 
 	ClassDB::bind_method(D_METHOD("queue_redraw"), &KABOOMCanvasItem::queue_redraw);
 	// ClassDB::bind_method(D_METHOD("move_to_front"), &KABOOMCanvasItem::move_to_front);
