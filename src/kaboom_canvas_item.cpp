@@ -140,19 +140,19 @@ bool KABOOMCanvasItem::is_visible_in_tree() const {
 
 #pragma region Draw Functions
 
-// void KABOOMCanvasItem::queue_redraw() {
-// 	ERR_THREAD_GUARD
-// 	if (!is_inside_tree()) {
-// 		return;
-// 	}
-// 	if (pending_update) {
-// 		return;
-// 	}
+void KABOOMCanvasItem::queue_redraw() {
+	ERR_THREAD_GUARD
+	if (!is_inside_tree()) {
+		return;
+	}
+	if (pending_update) {
+		return;
+	}
 
-// 	pending_update = true;
+	pending_update = true;
 
-// 	callable_mp(this, &KABOOMCanvasItem::_redraw_callback).call_deferred();
-// }
+	// callable_mp(this, &KABOOMCanvasItem::_redraw_callback).call_deferred();
+}
 // void KABOOMCanvasItem::_draw() {}
 
 // void KABOOMCanvasItem::_redraw_callback() {
@@ -220,7 +220,7 @@ void KABOOMCanvasItem::_bind_methods() {
 	// ClassDB::bind_method(D_METHOD("show"), &KABOOMCanvasItem::show);
 	// ClassDB::bind_method(D_METHOD("hide"), &KABOOMCanvasItem::hide);
 
-	// ClassDB::bind_method(D_METHOD("queue_redraw"), &KABOOMCanvasItem::queue_redraw);
+	ClassDB::bind_method(D_METHOD("queue_redraw"), &KABOOMCanvasItem::queue_redraw);
 	// ClassDB::bind_method(D_METHOD("move_to_front"), &KABOOMCanvasItem::move_to_front);
 
 	// ClassDB::bind_method(D_METHOD("set_as_top_level", "enable"), &KABOOMCanvasItem::set_as_top_level);
