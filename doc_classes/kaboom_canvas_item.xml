@@ -14,6 +14,64 @@
 		<link title="Audio Spectrum Visualizer Demo">https://godotengine.org/asset-library/asset/2762</link>
 	</tutorials> -->
 	<methods>
+		<method name="add_child">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<param index="1" name="force_readable_name" type="bool" default="false" />
+			<param index="2" name="internal" type="int" enum="Node.InternalMode" default="0" />
+			<description>
+				Adds a child [param node]. Nodes can have any number of children, but every child must have a unique name. Child nodes are automatically deleted when the parent node is deleted, so an entire scene can be removed by deleting its topmost node.
+				If [param force_readable_name] is [code]true[/code], improves the readability of the added [param node]. If not named, the [param node] is renamed to its type, and if it shares [member name] with a sibling, a number is suffixed more appropriately. This operation is very slow. As such, it is recommended leaving this to [code]false[/code], which assigns a dummy name featuring [code]@[/code] in both situations.
+				If [param internal] is different than [constant INTERNAL_MODE_DISABLED], the child will be added as internal node. These nodes are ignored by methods like [method get_children], unless their parameter [code]include_internal[/code] is [code]true[/code]. It also prevents these nodes being duplicated with their parent. The intended usage is to hide the internal nodes from the user, so the user won't accidentally delete or modify them. Used by some GUI nodes, e.g. [ColorPicker]. See [enum InternalMode] for available modes.
+				[b]Note:[/b] If [param node] already has a parent, this method will fail. Use [method remove_child] first to remove [param node] from its current parent. For example:
+				[codeblocks]
+				[gdscript]
+				var child_node = get_child(0)
+				if child_node.get_parent():
+				    child_node.get_parent().remove_child(child_node)
+				add_child(child_node)
+				[/gdscript]
+				[csharp]
+				Node childNode = GetChild(0);
+				if (childNode.GetParent() != null)
+				{
+				    childNode.GetParent().RemoveChild(childNode);
+				}
+				AddChild(childNode);
+				[/csharp]
+				[/codeblocks]
+				If you need the child node to be added below a specific node in the list of children, use [method add_sibling] instead of this method.
+				[b]Note:[/b] If you want a child to be persisted to a [PackedScene], you must set [member owner] in addition to calling [method add_child]. This is typically relevant for [url=$DOCS_URL/tutorials/plugins/running_code_in_the_editor.html]tool scripts[/url] and [url=$DOCS_URL/tutorials/plugins/editor/index.html]editor plugins[/url]. If [method add_child] is called without setting [member owner], the newly added [Node] will not be visible in the scene tree, though it will be visible in the 2D/3D view.
+			</description>
+		</method>
+		<method name="add_sibling">
+			<return type="void" />
+			<param index="0" name="sibling" type="Node" />
+			<param index="1" name="force_readable_name" type="bool" default="false" />
+			<description>
+				Adds a [param sibling] node to this node's parent, and moves the added sibling right below this node.
+				If [param force_readable_name] is [code]true[/code], improves the readability of the added [param sibling]. If not named, the [param sibling] is renamed to its type, and if it shares [member name] with a sibling, a number is suffixed more appropriately. This operation is very slow. As such, it is recommended leaving this to [code]false[/code], which assigns a dummy name featuring [code]@[/code] in both situations.
+				Use [method add_child] instead of this method if you don't need the child node to be added below a specific node in the list of children.
+				[b]Note:[/b] If this node is internal, the added sibling will be internal too (see [method add_child]'s [code]internal[/code] parameter).
+			</description>
+		</method>
+		<method name="remove_child">
+			<return type="void" />
+			<param index="0" name="node" type="Node" />
+			<description>
+				Removes a child [param node]. The [param node], along with its children, are [b]not[/b] deleted. To delete a node, see [method queue_free].
+				[b]Note:[/b] When this node is inside the tree, this method sets the [member owner] of the removed [param node] (or its descendants) to [code]null[/code], if their [member owner] is no longer an ancestor (see [method is_ancestor_of]).
+			</description>
+		</method>
+		<method name="move_child">
+			<return type="void" />
+			<param index="0" name="child_node" type="Node" />
+			<param index="1" name="to_index" type="int" />
+			<description>
+				Moves [param child_node] to the given index. A node's index is the order among its siblings. If [param to_index] is negative, the index is counted from the end of the list. See also [method get_child] and [method get_index].
+				[b]Note:[/b] The processing order of several engine callbacks ([method _ready], [method _process], etc.) and notifications sent through [method propagate_notification] is affected by tree order. [CanvasItem] nodes are also rendered in tree order. See also [member process_priority].
+			</description>
+		</method>
 		<method name="_draw" qualifiers="virtual">
 			<return type="void" />
 			<description>

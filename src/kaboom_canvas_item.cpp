@@ -20,6 +20,15 @@ KABOOMCanvasItem::~KABOOMCanvasItem() {
 
 #pragma region Class Functions
 
+KABOOMCanvasItem *KABOOMCanvasItem::get_parent_item() const {
+	ERR_READ_THREAD_GUARD_V(nullptr);
+	if (top_level) {
+		return nullptr;
+	}
+
+	return Object::cast_to<KABOOMCanvasItem>(get_parent());
+}
+
 #pragma region Node Override Functions
 
 void KABOOMCanvasItem::add_child(Node *p_node, bool p_force_readable_name, Node::InternalMode p_internal) {
@@ -30,10 +39,10 @@ void KABOOMCanvasItem::add_child(Node *p_node, bool p_force_readable_name, Node:
 	Node::add_child(p_node, p_force_readable_name, p_internal);
 }
 
-void KABOOMCanvasItem::add_sibling(Node *p_sibling) {
+void KABOOMCanvasItem::add_sibling(Node *p_sibling, bool p_force_readable_name) {
 	ERR_FAIL_COND_MSG(_is_blocked(), "Parent node is busy setting up children, `add_sibling()` failed. Consider using `add_sibling.call_deferred(sibling)` instead.");
 
-	Node::add_sibling(p_sibling);
+	Node::add_sibling(p_sibling, p_force_readable_name);
 }
 
 void KABOOMCanvasItem::remove_child(Node *p_node) {
@@ -69,6 +78,19 @@ CanvasLayer *KABOOMCanvasItem::get_canvas_layer_node() const {
 #pragma endregion
 
 #pragma region Visibility Functions
+
+void KABOOMCanvasItem::_top_level_raise_self() {
+	if (!is_inside_tree()) {
+		return;
+	}
+
+	if (canvas_layer) {
+		// RenderingServer::get_singleton()->canvas_item_set_draw_index(canvas_item, canvas_layer->get_sort_index());
+		// RenderingServer::get_singleton()->canvas_item_set_draw_index(canvas_item, canvas_layer->get_sort_index());
+	} else {
+		// RenderingServer::get_singleton()->canvas_item_set_draw_index(canvas_item, get_viewport()->gui_get_canvas_sort_index());
+	}
+}
 
 void KABOOMCanvasItem::show() {
 	ERR_MAIN_THREAD_GUARD;
@@ -151,38 +173,125 @@ void KABOOMCanvasItem::queue_redraw() {
 
 	pending_update = true;
 
-	// callable_mp(this, &KABOOMCanvasItem::_redraw_callback).call_deferred();
+	callable_mp(this, &KABOOMCanvasItem::_redraw_callback).call_deferred();
 }
 // void KABOOMCanvasItem::_draw() {}
 
-// void KABOOMCanvasItem::_redraw_callback() {
-// 	if (!is_inside_tree()) {
-// 		pending_update = false;
-// 		return;
-// 	}
+void KABOOMCanvasItem::_redraw_callback() {
+	if (!is_inside_tree()) {
+		pending_update = false;
+		return;
+	}
 
-// 	RID ci = get_canvas_item();
-// 	RenderingServer::get_singleton()->canvas_item_clear(ci);
-// 	//todo updating = true - only allow drawing here
-// 	if (is_visible_in_tree()) {
-// 		drawing = true;
-// 		Ref<TextServer> ts = TextServerManager::get_singleton()->get_primary_interface();
-// 		if (ts.is_valid()) {
-// 			ts->set_current_drawn_item_oversampling(get_viewport()->get_oversampling());
-// 		}
-// 		current_item_drawn = this;
-// 		notification(NOTIFICATION_DRAW);
-// 		emit_signal("draw");
-// 		GDVIRTUAL_CALL("_draw");
-// 		current_item_drawn = nullptr;
-// 		if (ts.is_valid()) {
-// 			ts->set_current_drawn_item_oversampling(0.0);
-// 		}
-// 		drawing = false;
-// 	}
-// 	//todo updating = false
-// 	pending_update = false; // don't change to false until finished drawing (avoid recursive update)
+	RID ci = get_canvas_item();
+	RenderingServer *rs = RenderingServer::get_singleton();
+	rs->canvas_item_clear(ci);
+
+	//todo updating = true - only allow drawing here
+	if (is_visible_in_tree()) {
+		drawing = true;
+		Ref<TextServer> ts = TextServerManager::get_singleton()->get_primary_interface();
+		double oversampling = 1.0;
+		if (ts.is_valid()) {
+			// ts->font_set_global_oversampling(ts->font_get_global_oversampling());
+			// ts->set_current_drawn_item_oversampling(get_viewport()->get_oversampling());
+
+			Ref<Viewport> viewport = get_viewport();
+
+			if (viewport.is_valid()) {
+				Size2 canvas_size = viewport->get_visible_rect().size;
+				Size2 texture_size = viewport->get_vrs_texture()->get_size();
+
+				if (texture_size.x > 0 && texture_size.y > 0) {
+					oversampling = texture_size.x / canvas_size.x;
+				}
+			}
+
+			// Apply oversampling by scaling the canvas transform if needed
+			if (oversampling != 1.0) {
+				Transform2D original_xform = Transform2D();
+				// Transform2D original_xform = get_transform();
+				rs->canvas_item_set_transform(ci, original_xform.scaled(Vector2(oversampling, oversampling)));
+			}
+		}
+		current_item_drawn = this;
+		notification(NOTIFICATION_DRAW);
+		emit_signal("draw");
+		GDVIRTUAL_CALL(_draw);
+		current_item_drawn = nullptr;
+		if (ts.is_valid()) {
+			// ts->font_set_global_oversampling(0.0);
+			// ts->set_current_drawn_item_oversampling(0.0);
+			if (oversampling != 1.0) {
+				rs->canvas_item_set_transform(ci, Transform2D()); // Reset to identity
+			}
+		}
+		drawing = false;
+	}
+	//todo updating = false
+	pending_update = false; // don't change to false until finished drawing (avoid recursive update)
+}
+
+KABOOMCanvasItem *KABOOMCanvasItem::current_item_drawn = nullptr;
+KABOOMCanvasItem *KABOOMCanvasItem::get_current_item_drawn() {
+	return current_item_drawn;
+}
+
+#pragma endregion
+
+#pragma region Transform Functions
+
+Transform2D KABOOMCanvasItem::get_global_transform_with_canvas() const {
+	ERR_READ_THREAD_GUARD_V(Transform2D());
+	if (canvas_layer) {
+		return canvas_layer->get_final_transform() * get_global_transform();
+	} else if (is_inside_tree()) {
+		return get_viewport()->get_canvas_transform() * get_global_transform();
+	} else {
+		return get_global_transform();
+	}
+}
+
+// Transform2D KABOOMCanvasItem::get_screen_transform() const {
+// 	ERR_READ_THREAD_GUARD_V(Transform2D());
+// 	ERR_FAIL_COND_V(!is_inside_tree(), Transform2D());
+// 	return get_viewport()->get_popup_base_transform() * get_global_transform_with_canvas();
+// 	return get_viewport()->get_popup_base_transform() * get_global_transform_with_canvas();
 // }
+
+Transform2D KABOOMCanvasItem::get_global_transform() const {
+	ERR_READ_THREAD_GUARD_V(Transform2D());
+
+	if (_is_global_invalid()) {
+		// This code can enter multiple times from threads if dirty, this is expected.
+		const KABOOMCanvasItem *pi = get_parent_item();
+		Transform2D new_global;
+		if (pi) {
+			new_global = pi->get_global_transform() * get_transform();
+		} else {
+			new_global = get_transform();
+		}
+
+		global_transform = new_global;
+		_set_global_invalid(false);
+	}
+
+	return global_transform;
+}
+
+// Same as get_global_transform() but no reset for `global_invalid`.
+Transform2D KABOOMCanvasItem::get_global_transform_const() const {
+	if (_is_global_invalid()) {
+		const KABOOMCanvasItem *pi = get_parent_item();
+		if (pi) {
+			global_transform = pi->get_global_transform_const() * get_transform();
+		} else {
+			global_transform = get_transform();
+		}
+	}
+
+	return global_transform;
+}
 
 #pragma endregion
 
@@ -191,6 +300,12 @@ void KABOOMCanvasItem::queue_redraw() {
 #pragma region Godot Bindings
 
 void KABOOMCanvasItem::_bind_methods() {
+	// Node override bindings
+	ClassDB::bind_method(D_METHOD("add_child", "node", "force_readable_name", "internal"), &KABOOMCanvasItem::add_child);
+	ClassDB::bind_method(D_METHOD("remove_child", "node"), &KABOOMCanvasItem::remove_child);
+	ClassDB::bind_method(D_METHOD("add_sibling", "sibling", "force_readable_name"), &KABOOMCanvasItem::add_sibling);
+	ClassDB::bind_method(D_METHOD("move_child", "child_node", "to_index"), &KABOOMCanvasItem::move_child);
+
 	// ClassDB::bind_method(D_METHOD("_top_level_raise_self"), &KABOOMCanvasItem::_top_level_raise_self);
 
 	// #ifdef TOOLS_ENABLED
@@ -325,9 +440,9 @@ void KABOOMCanvasItem::_bind_methods() {
 	// ClassDB::bind_method(D_METHOD("set_clip_children_mode", "mode"), &KABOOMCanvasItem::set_clip_children_mode);
 	// ClassDB::bind_method(D_METHOD("get_clip_children_mode"), &KABOOMCanvasItem::get_clip_children_mode);
 
-	// GDVIRTUAL_BIND("_draw");
+	GDVIRTUAL_BIND(_draw);
 
-	// ADD_GROUP("Visibility", "");
+	ADD_GROUP("Visibility", "");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");
 	// ADD_PROPERTY(PropertyInfo(Variant::COLOR, "modulate"), "set_modulate", "get_modulate");
 	// ADD_PROPERTY(PropertyInfo(Variant::COLOR, "self_modulate"), "set_self_modulate", "get_self_modulate");
@@ -351,10 +466,10 @@ void KABOOMCanvasItem::_bind_methods() {
 	// ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_parent_material"), "set_use_parent_material", "get_use_parent_material");
 	// // ADD_PROPERTY(PropertyInfo(Variant::BOOL,"transform/notify"),"set_transform_notify","is_transform_notify_enabled");
 
-	// ADD_SIGNAL(MethodInfo("draw"));
-	// ADD_SIGNAL(MethodInfo("visibility_changed"));
-	// ADD_SIGNAL(MethodInfo("hidden"));
-	// ADD_SIGNAL(MethodInfo("item_rect_changed"));
+	ADD_SIGNAL(MethodInfo("draw"));
+	ADD_SIGNAL(MethodInfo("visibility_changed"));
+	ADD_SIGNAL(MethodInfo("hidden"));
+	ADD_SIGNAL(MethodInfo("item_rect_changed"));
 
 	BIND_CONSTANT(NOTIFICATION_TRANSFORM_CHANGED);
 	BIND_CONSTANT(NOTIFICATION_LOCAL_TRANSFORM_CHANGED);

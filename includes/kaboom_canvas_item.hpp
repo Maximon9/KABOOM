@@ -34,6 +34,26 @@
 
 #include <godot_cpp/variant/variant.hpp>
 
+#include <godot_cpp/classes/text_server.hpp>
+#include <godot_cpp/classes/viewport.hpp>
+
+#include <godot_cpp/core/binder_common.hpp>
+#include <godot_cpp/core/builtin_ptrcall.hpp>
+#include <godot_cpp/core/defs.hpp>
+#include <godot_cpp/core/engine_ptrcall.hpp>
+#include <godot_cpp/core/error_macros.hpp>
+#include <godot_cpp/core/gdvirtual.gen.inc>
+#include <godot_cpp/core/math.hpp>
+#include <godot_cpp/core/memory.hpp>
+#include <godot_cpp/core/method_bind.hpp>
+#include <godot_cpp/core/method_ptrcall.hpp>
+#include <godot_cpp/core/mutex_lock.hpp>
+#include <godot_cpp/core/object.hpp>
+#include <godot_cpp/core/object_id.hpp>
+#include <godot_cpp/core/print_string.hpp>
+#include <godot_cpp/core/type_info.hpp>
+#include <godot_cpp/core/version.hpp>
+
 using namespace godot;
 
 // #define ERR_THREAD_GUARD
@@ -74,12 +94,12 @@ class KABOOMCanvasItem : public Node {
 	friend class CanvasLayer;
 
 protected:
-	// union MTFlag {
-	// 	SafeFlag mt;
-	// 	bool st;
-	// 	MTFlag() :
-	// 			mt{} {}
-	// };
+	union MTFlag {
+		SafeFlag mt;
+		bool st;
+		MTFlag() :
+				mt{} {}
+	};
 	// template <typename T>
 	// union MTNumeric {
 	// 	SafeNumeric<T> mt;
@@ -130,7 +150,7 @@ public:
 	};
 
 	void add_child(Node *p_node, bool p_force_readable_name = false, Node::InternalMode p_internal = Node::INTERNAL_MODE_DISABLED);
-	void add_sibling(Node *p_sibling);
+	void add_sibling(Node *p_sibling, bool p_force_readable_name = false);
 	void remove_child(Node *p_node);
 	void move_child(Node *p_child_node, int p_to_index);
 
@@ -149,6 +169,12 @@ private:
 
 	CanvasLayer *canvas_layer = nullptr;
 
+#pragma region Draw Functions
+
+	void _redraw_callback();
+
+#pragma endregion
+
 	// Color modulate = Color(1, 1, 1, 1);
 	// Color self_modulate = Color(1, 1, 1, 1);
 
@@ -166,8 +192,8 @@ private:
 	bool visible = true;
 	bool parent_visible_in_tree = false;
 	bool pending_update = false;
-	// bool top_level = false;
-	// bool drawing = false;
+	bool top_level = false;
+	bool drawing = false;
 	// bool block_transform_notify = false;
 	// bool behind = false;
 	// bool use_parent_material = false;
@@ -186,21 +212,19 @@ private:
 	// mutable HashMap<StringName, Variant> instance_shader_parameters;
 	// mutable HashMap<StringName, StringName> instance_shader_parameter_property_remap;
 
-	// mutable Transform2D global_transform;
-	// mutable MTFlag global_invalid;
+	mutable Transform2D global_transform;
+	mutable MTFlag global_invalid;
 
-	// _FORCE_INLINE_ bool _is_global_invalid() const { return get_process_thread_group() ? global_invalid.mt.is_set() : global_invalid.st; }
-	// void _set_global_invalid(bool p_invalid) const;
+	_FORCE_INLINE_ bool _is_global_invalid() const { return get_process_thread_group() ? global_invalid.mt.is_set() : global_invalid.st; }
+	void _set_global_invalid(bool p_invalid) const;
 
-	// void _top_level_raise_self();
+	void _top_level_raise_self();
 
 	void _propagate_visibility_changed(bool p_parent_visible_in_tree);
 	void _handle_visibility_change(bool p_visible);
 
 	// virtual void _top_level_changed();
 	// virtual void _top_level_changed_on_parent();
-
-	// void _redraw_callback();
 
 	// void _enter_canvas();
 	// void _exit_canvas();
@@ -212,7 +236,7 @@ private:
 	// // virtual void _physics_interpolated_changed() override;
 	// virtual void _physics_interpolated_changed();
 
-	// static KABOOMCanvasItem *current_item_drawn;
+	static KABOOMCanvasItem *current_item_drawn;
 	// friend class Viewport;
 	// void _refresh_texture_repeat_cache() const;
 	// void _update_texture_repeat_changed(bool p_propagate);
@@ -261,7 +285,7 @@ private:
 
 	// _FORCE_INLINE_ void set_hide_clip_children(bool p_value) { hide_clip_children = p_value; }
 
-	// 	// GDVIRTUAL0(_draw)
+	GDVIRTUAL0(_draw)
 public:
 #pragma region CanvasLayer Functions
 
@@ -272,7 +296,6 @@ public:
 #pragma region DrawFunctions
 
 	void queue_redraw();
-	// virtual void _draw();
 
 #pragma endregion
 	// // #ifdef TOOLS_ENABLED
@@ -399,7 +422,7 @@ public:
 	// void draw_animation_slice(double p_animation_length, double p_slice_begin, double p_slice_end, double p_offset = 0);
 	// void draw_end_animation();
 
-	// static KABOOMCanvasItem *get_current_item_drawn();
+	static KABOOMCanvasItem *get_current_item_drawn();
 
 	// /* RECT / TRANSFORM */
 
@@ -409,14 +432,14 @@ public:
 	// void set_draw_behind_parent(bool p_enable);
 	// bool is_draw_behind_parent_enabled() const;
 
-	// KABOOMCanvasItem *get_parent_item() const;
+	KABOOMCanvasItem *get_parent_item() const;
 
-	// virtual Transform2D get_transform() const = 0;
+	virtual Transform2D get_transform() const = 0;
 
-	// virtual Transform2D get_global_transform() const;
-	// virtual Transform2D get_global_transform_const() const;
-	// virtual Transform2D get_global_transform_with_canvas() const;
-	// virtual Transform2D get_screen_transform() const;
+	virtual Transform2D get_global_transform() const;
+	virtual Transform2D get_global_transform_const() const;
+	virtual Transform2D get_global_transform_with_canvas() const;
+	virtual Transform2D get_screen_transform() const;
 
 	// KABOOMCanvasItem *get_top_level() const;
 	_FORCE_INLINE_ RID get_canvas_item() const {
