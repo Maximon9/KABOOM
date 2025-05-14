@@ -92,6 +92,16 @@ void KABOOMCanvasItem::_top_level_raise_self() {
 	}
 }
 
+KABOOMCanvasItem *KABOOMCanvasItem::get_top_level() const {
+	ERR_READ_THREAD_GUARD_V(nullptr);
+	KABOOMCanvasItem *ci = const_cast<KABOOMCanvasItem *>(this);
+	while (!ci->top_level && Object::cast_to<KABOOMCanvasItem>(ci->get_parent())) {
+		ci = Object::cast_to<KABOOMCanvasItem>(ci->get_parent());
+	}
+
+	return ci;
+}
+
 void KABOOMCanvasItem::show() {
 	ERR_MAIN_THREAD_GUARD;
 	set_visible(true);
@@ -446,8 +456,8 @@ void KABOOMCanvasItem::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "visible"), "set_visible", "is_visible");
 	// ADD_PROPERTY(PropertyInfo(Variant::COLOR, "modulate"), "set_modulate", "get_modulate");
 	// ADD_PROPERTY(PropertyInfo(Variant::COLOR, "self_modulate"), "set_self_modulate", "get_self_modulate");
-	// ADD_PROPERTY(PropertyInfo(Variant::BOOL, "show_behind_parent"), "set_draw_behind_parent", "is_draw_behind_parent_enabled");
-	// ADD_PROPERTY(PropertyInfo(Variant::BOOL, "top_level"), "set_as_top_level", "is_set_as_top_level");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "show_behind_parent"), "set_draw_behind_parent", "is_draw_behind_parent_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "top_level"), "set_as_top_level", "is_set_as_top_level");
 	// ADD_PROPERTY(PropertyInfo(Variant::INT, "clip_children", PROPERTY_HINT_ENUM, "Disabled,Clip Only,Clip + Draw"), "set_clip_children_mode", "get_clip_children_mode");
 	// ADD_PROPERTY(PropertyInfo(Variant::INT, "light_mask", PROPERTY_HINT_LAYERS_2D_RENDER), "set_light_mask", "get_light_mask");
 	// ADD_PROPERTY(PropertyInfo(Variant::INT, "visibility_layer", PROPERTY_HINT_LAYERS_2D_RENDER), "set_visibility_layer", "get_visibility_layer");
