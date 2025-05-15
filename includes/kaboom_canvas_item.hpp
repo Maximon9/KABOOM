@@ -5,54 +5,62 @@
 // #include <godot_cpp/classes/canvas_item.hpp>
 #include <godot_cpp/classes/node.hpp>
 
-#include <godot_cpp/classes/texture2d.hpp>
-
-#include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/variant/utility_functions.hpp>
-
-#include <godot_cpp/classes/material.hpp>
 #include <godot_cpp/classes/rendering_server.hpp>
-#include <godot_cpp/templates/hash_map.hpp>
-#include <godot_cpp/templates/self_list.hpp>
+#include <godot_cpp/classes/text_server.hpp>
+#include <godot_cpp/classes/text_server_manager.hpp>
+#include <godot_cpp/classes/translation_server.hpp>
 
+#include <godot_cpp/classes/atlas_texture.hpp>
+#include <godot_cpp/classes/canvas_group.hpp>
 #include <godot_cpp/classes/canvas_layer.hpp>
+#include <godot_cpp/classes/display_server.hpp>
+#include <godot_cpp/classes/font.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/material.hpp>
+#include <godot_cpp/classes/mesh.hpp>
 #include <godot_cpp/classes/multi_mesh.hpp>
+#include <godot_cpp/classes/scene_tree.hpp>
 #include <godot_cpp/classes/style_box.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
+#include <godot_cpp/classes/viewport.hpp>
 #include <godot_cpp/classes/window.hpp>
 #include <godot_cpp/classes/world2d.hpp>
 
-#include <godot_cpp/classes/font.hpp>
-#include <godot_cpp/classes/scene_tree.hpp>
-
+#include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/classes/theme_db.hpp>
+
+#include <godot_cpp/templates/hash_map.hpp>
+#include <godot_cpp/templates/self_list.hpp>
+
 #include <godot_cpp/variant/rid.hpp>
 #include <godot_cpp/variant/transform2d.hpp>
 
-#include <godot_cpp/classes/os.hpp>
-#include <godot_cpp/classes/text_server_manager.hpp>
-#include <godot_cpp/core/property_info.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
 
+#include <godot_cpp/variant/char_string.hpp>
+#include <godot_cpp/variant/packed_color_array.hpp>
+#include <godot_cpp/variant/packed_string_array.hpp>
+#include <godot_cpp/variant/packed_vector2_array.hpp>
+#include <godot_cpp/variant/string.hpp>
+#include <godot_cpp/variant/string_name.hpp>
 #include <godot_cpp/variant/variant.hpp>
+#include <godot_cpp/variant/vector2.hpp>
 
-#include <godot_cpp/classes/text_server.hpp>
-#include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/core/gdvirtual.gen.inc>
 
 #include <godot_cpp/core/binder_common.hpp>
 #include <godot_cpp/core/builtin_ptrcall.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/core/engine_ptrcall.hpp>
 #include <godot_cpp/core/error_macros.hpp>
-#include <godot_cpp/core/gdvirtual.gen.inc>
 #include <godot_cpp/core/math.hpp>
 #include <godot_cpp/core/memory.hpp>
 #include <godot_cpp/core/method_bind.hpp>
 #include <godot_cpp/core/method_ptrcall.hpp>
-#include <godot_cpp/core/mutex_lock.hpp>
 #include <godot_cpp/core/object.hpp>
 #include <godot_cpp/core/object_id.hpp>
-#include <godot_cpp/core/print_string.hpp>
-#include <godot_cpp/core/type_info.hpp>
-#include <godot_cpp/core/version.hpp>
+#include <godot_cpp/core/property_info.hpp>
 
 using namespace godot;
 
@@ -94,9 +102,15 @@ class KABOOMCanvasItem : public Node {
 	friend class CanvasLayer;
 #pragma region Script API
 
-#pragma region Protected Properties and Types
+#pragma region Godot Bindings
 
 protected:
+	static void _bind_methods();
+
+#pragma endregion
+
+#pragma region Protected Properties and Types
+
 	union MTFlag {
 		SafeFlag mt;
 		bool st;
@@ -167,6 +181,14 @@ public:
 #pragma region Private Properties
 
 private:
+#pragma region Static
+
+	static KABOOMCanvasItem *current_item_drawn;
+
+#pragma endregion
+
+#pragma region Misc
+
 	mutable SelfList<Node>
 			xform_change;
 
@@ -176,6 +198,9 @@ private:
 	List<KABOOMCanvasItem *>::Element *C = nullptr;
 
 	Window *window = nullptr;
+
+#pragma endregion
+
 #pragma region Blocking
 	int _block_count = 0;
 #pragma endregion
@@ -258,6 +283,29 @@ private:
 
 #pragma region Private Functions
 
+#pragma region Global Invalid Flag Functions
+
+	_FORCE_INLINE_ bool _is_global_invalid() const { return get_process_thread_group() ? global_invalid.mt.is_set() : global_invalid.st; }
+	void _set_global_invalid(bool p_invalid) const;
+
+#pragma endregion
+
+#pragma region Blocking
+
+	void _block();
+	void _unblock();
+	bool _is_blocked() const;
+
+#pragma endregion
+
+#pragma region Drawing
+
+	void _redraw_callback();
+
+#pragma endregion
+
+#pragma region Visibility
+
 	void _top_level_raise_self();
 
 	void _propagate_visibility_changed(bool p_parent_visible_in_tree);
@@ -266,25 +314,42 @@ private:
 	virtual void _top_level_changed();
 	virtual void _top_level_changed_on_parent();
 
-	void _enter_canvas();
-	void _exit_canvas();
-
 	void _window_visibility_changed();
 
-	void _notify_transform(KABOOMCanvasItem *p_node);
+#pragma endregion
+
+#pragma region Misc
+
+	void _enter_canvas();
+	void _exit_canvas();
 
 	// virtual void _physics_interpolated_changed() override;
 	virtual void _physics_interpolated_changed();
 
-	static KABOOMCanvasItem *current_item_drawn;
 	friend class Viewport;
 	void _refresh_texture_repeat_cache() const;
 	void _update_texture_repeat_changed(bool p_propagate);
 	void _refresh_texture_filter_cache() const;
 	void _update_texture_filter_changed(bool p_propagate);
 
-	void _notify_transform_deferred();
 	const StringName *_instance_shader_parameter_get_remap(const StringName &p_name) const;
+
+#pragma endregion
+
+#pragma region Transform
+
+	void _notify_transform(KABOOMCanvasItem *p_node);
+
+	void _notify_transform_deferred();
+
+#pragma endregion
+
+#pragma endregion
+
+#pragma region Protected Functions
+
+protected:
+#pragma region Misc
 
 	bool _set(const StringName &p_name, const Variant &p_value);
 	bool _get(const StringName &p_name, Variant &r_ret) const;
@@ -305,58 +370,17 @@ private:
 
 	void _notification(int p_what);
 
-#pragma region Blocking
-
-	void _block() { _block_count++; }
-	void _unblock() { _block_count = MAX(_block_count - 1, 0); }
-	bool _is_blocked() const { return _block_count > 0; }
-
-#pragma endregion
-
-#pragma region Drawing
-
-	void _redraw_callback();
-
-#pragma endregion
-
-#pragma region Global Invalid Flag Functions
-
-	_FORCE_INLINE_ bool _is_global_invalid() const { return get_process_thread_group() ? global_invalid.mt.is_set() : global_invalid.st; }
-	void _set_global_invalid(bool p_invalid) const;
-
-#pragma endregion
-
-#pragma endregion
-
-#pragma region Protected Functions
-
-protected:
-#ifndef DISABLE_DEPRECATED
-	void _draw_string_bind_compat_104872(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
-	void _draw_multiline_string_bind_compat_104872(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
-	void _draw_string_outline_bind_compat_104872(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
-	void _draw_multiline_string_outline_bind_compat_104872(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
-	void _draw_char_bind_compat_104872(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0)) const;
-	void _draw_char_outline_bind_compat_104872(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0)) const;
-	void _draw_circle_bind_compat_84472(const Point2 &p_pos, real_t p_radius, const Color &p_color);
-	void _draw_rect_bind_compat_84523(const Rect2 &p_rect, const Color &p_color, bool p_filled, real_t p_width);
-	void _draw_dashed_line_bind_compat_84523(const Point2 &p_from, const Point2 &p_to, const Color &p_color, real_t p_width, real_t p_dash, bool p_aligned);
-	void _draw_multiline_bind_compat_84523(const Vector<Point2> &p_points, const Color &p_color, real_t p_width);
-	void _draw_multiline_colors_bind_compat_84523(const Vector<Point2> &p_points, const Vector<Color> &p_colors, real_t p_width);
-	static void _bind_compatibility_methods();
-#endif // DISABLE_DEPRECATED
-
 	void _validate_property(PropertyInfo &p_property) const;
 
 	_FORCE_INLINE_ void set_hide_clip_children(bool p_value) { hide_clip_children = p_value; }
+
+#pragma endregion
 
 #pragma region Virtual Godot Functions
 
 	GDVIRTUAL0(_draw)
 
 #pragma endregion
-
-	static void _bind_methods();
 
 #pragma endregion
 
@@ -428,6 +452,7 @@ public:
 
 	void show();
 	void hide();
+	void move_to_front();
 
 	void set_visibility_layer(uint32_t p_visibility_layer);
 	uint32_t get_visibility_layer() const;
@@ -442,7 +467,6 @@ public:
 
 	void set_draw_behind_parent(bool p_enable);
 	bool is_draw_behind_parent_enabled() const;
-	// void move_to_front();
 	KABOOMCanvasItem *get_top_level() const;
 
 #pragma endregion
@@ -493,11 +517,10 @@ public:
 
 	virtual void set_texture_filter(TextureFilter p_texture_filter);
 	TextureFilter get_texture_filter() const;
+	TextureFilter get_texture_filter_in_tree() const;
 
 	virtual void set_texture_repeat(TextureRepeat p_texture_repeat);
 	TextureRepeat get_texture_repeat() const;
-
-	TextureFilter get_texture_filter_in_tree() const;
 	TextureRepeat get_texture_repeat_in_tree() const;
 
 #pragma endregion
@@ -529,11 +552,11 @@ public:
 
 	void draw_dashed_line(const Point2 &p_from, const Point2 &p_to, const Color &p_color, real_t p_width = -1.0, real_t p_dash = 2.0, bool p_aligned = true, bool p_antialiased = false);
 	void draw_line(const Point2 &p_from, const Point2 &p_to, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false);
-	void draw_polyline(const Vector<Point2> &p_points, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false);
-	void draw_polyline_colors(const Vector<Point2> &p_points, const Vector<Color> &p_colors, real_t p_width = -1.0, bool p_antialiased = false);
+	void draw_polyline(const PackedVector2Array &p_points, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false);
+	void draw_polyline_colors(const PackedVector2Array &p_points, const PackedColorArray &p_colors, real_t p_width = -1.0, bool p_antialiased = false);
 	void draw_arc(const Vector2 &p_center, real_t p_radius, real_t p_start_angle, real_t p_end_angle, int p_point_count, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false);
-	void draw_multiline(const Vector<Point2> &p_points, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false);
-	void draw_multiline_colors(const Vector<Point2> &p_points, const Vector<Color> &p_colors, real_t p_width = -1.0, bool p_antialiased = false);
+	void draw_multiline(const PackedVector2Array &p_points, const Color &p_color, real_t p_width = -1.0, bool p_antialiased = false);
+	void draw_multiline_colors(const PackedVector2Array &p_points, const PackedColorArray &p_colors, real_t p_width = -1.0, bool p_antialiased = false);
 	void draw_rect(const Rect2 &p_rect, const Color &p_color, bool p_filled = true, real_t p_width = -1.0, bool p_antialiased = false);
 	void draw_circle(const Point2 &p_pos, real_t p_radius, const Color &p_color, bool p_filled = true, real_t p_width = -1.0, bool p_antialiased = false);
 	void draw_texture(const Ref<Texture2D> &p_texture, const Point2 &p_pos, const Color &p_modulate = Color(1, 1, 1, 1));
@@ -542,21 +565,27 @@ public:
 	void draw_msdf_texture_rect_region(const Ref<Texture2D> &p_texture, const Rect2 &p_rect, const Rect2 &p_src_rect, const Color &p_modulate = Color(1, 1, 1), double p_outline = 0.0, double p_pixel_range = 4.0, double p_scale = 1.0);
 	void draw_lcd_texture_rect_region(const Ref<Texture2D> &p_texture, const Rect2 &p_rect, const Rect2 &p_src_rect, const Color &p_modulate = Color(1, 1, 1));
 	void draw_style_box(const Ref<StyleBox> &p_style_box, const Rect2 &p_rect);
-	void draw_primitive(const Vector<Point2> &p_points, const Vector<Color> &p_colors, const Vector<Point2> &p_uvs, Ref<Texture2D> p_texture = Ref<Texture2D>());
-	void draw_polygon(const Vector<Point2> &p_points, const Vector<Color> &p_colors, const Vector<Point2> &p_uvs = Vector<Point2>(), Ref<Texture2D> p_texture = Ref<Texture2D>());
-	void draw_colored_polygon(const Vector<Point2> &p_points, const Color &p_color, const Vector<Point2> &p_uvs = Vector<Point2>(), Ref<Texture2D> p_texture = Ref<Texture2D>());
+	void draw_primitive(const PackedVector2Array &p_points, const PackedColorArray &p_colors, const PackedVector2Array &p_uvs, Ref<Texture2D> p_texture = Ref<Texture2D>());
+	void draw_polygon(const PackedVector2Array &p_points, const PackedColorArray &p_colors, const PackedVector2Array &p_uvs = PackedVector2Array(), Ref<Texture2D> p_texture = Ref<Texture2D>());
+	void draw_colored_polygon(const PackedVector2Array &p_points, const Color &p_color, const PackedVector2Array &p_uvs = PackedVector2Array(), Ref<Texture2D> p_texture = Ref<Texture2D>());
 
 	void draw_mesh(const Ref<Mesh> &p_mesh, const Ref<Texture2D> &p_texture, const Transform2D &p_transform = Transform2D(), const Color &p_modulate = Color(1, 1, 1));
 	void draw_multimesh(const Ref<MultiMesh> &p_multimesh, const Ref<Texture2D> &p_texture);
 
-	void draw_string(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
-	void draw_multiline_string(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
+	// void draw_string(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
+	void draw_string(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
+	// void draw_multiline_string(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
+	void draw_multiline_string(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
 
-	void draw_string_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
-	void draw_multiline_string_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
+	// void draw_string_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
+	void draw_string_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
+	// void draw_multiline_string_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL, float p_oversampling = 0.0) const;
+	void draw_multiline_string_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_text, HorizontalAlignment p_alignment = HORIZONTAL_ALIGNMENT_LEFT, float p_width = -1, int p_font_size = DEFAULT_FONT_SIZE, int p_max_lines = -1, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), BitField<TextServer::LineBreakFlag> p_brk_flags = TextServer::BREAK_MANDATORY | TextServer::BREAK_WORD_BOUND, BitField<TextServer::JustificationFlag> p_jst_flags = TextServer::JUSTIFICATION_KASHIDA | TextServer::JUSTIFICATION_WORD_BOUND, TextServer::Direction p_direction = TextServer::DIRECTION_AUTO, TextServer::Orientation p_orientation = TextServer::ORIENTATION_HORIZONTAL) const;
 
-	void draw_char(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0), float p_oversampling = 0.0) const;
-	void draw_char_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), float p_oversampling = 0.0) const;
+	// void draw_char(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0), float p_oversampling = 0.0) const;
+	void draw_char(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, const Color &p_modulate = Color(1.0, 1.0, 1.0)) const;
+	// void draw_char_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0), float p_oversampling = 0.0) const;
+	void draw_char_outline(const Ref<Font> &p_font, const Point2 &p_pos, const String &p_char, int p_font_size = DEFAULT_FONT_SIZE, int p_size = 1, const Color &p_modulate = Color(1.0, 1.0, 1.0)) const;
 
 	void draw_set_transform(const Point2 &p_offset, real_t p_rot = 0.0, const Size2 &p_scale = Size2(1.0, 1.0));
 	void draw_set_transform_matrix(const Transform2D &p_matrix);
